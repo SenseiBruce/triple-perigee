@@ -1,0 +1,8 @@
+temp/
+output/
+__pycache__/
+*.mp3
+*.mp4
+*.png
+image_prompts.json
+.DS_Store
