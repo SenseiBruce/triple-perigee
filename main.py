@@ -6,7 +6,7 @@ import shutil
 import re
 from pathlib import Path
 import edge_tts
-from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips, concatenate_audioclips
 import numpy as np
 
 # --- CONFIGURATION ---
@@ -39,7 +39,7 @@ class VideoAutomationApp:
         # For a more advanced version, we could use an NLP library.
         clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', text).strip()
         # Create a more descriptive prompt for image generation
-        prompt = f"{clean_text}, vertical 9:16 aspect ratio, cinematic lighting, photorealistic, 4k, architectural detail, highly detailed"
+        prompt = f"{clean_text}, vertical 9:16 aspect ratio, portrait composition, cinematic lighting, photorealistic, 4k, architectural detail, highly detailed"
         return prompt
 
     def generate_image_asset(self, visual_prompt, output_filename):
@@ -70,13 +70,64 @@ class VideoAutomationApp:
         
         return clip.resize(effect)
 
+    async def process_segment(self, segment_texts, sentence_audio_paths, segment_idx, project_temp_dir, clips_list):
+        """
+        Processes a group of sentences as a single video segment.
+        Generates a visual prompt, image, combines audio, and creates a video clip.
+        """
+        from PIL import Image, ImageDraw, ImageFont
+        
+        combined_text = " ".join(segment_texts)
+        print(f"  Processing Segment {segment_idx+1}: {combined_text[:70]}...")
+
+        # 1. Generate visual prompt and image
+        prompt = self.generate_visual_prompt(combined_text)
+        img_path = project_temp_dir / f"img_segment_{segment_idx}.png"
+        self.generate_image_asset(prompt, img_path)
+
+        # 2. Combine sentence audios in-memory
+        audio_clips_to_combine = [AudioFileClip(str(p)) for p in sentence_audio_paths]
+        if not audio_clips_to_combine:
+            return
+
+        # Combine all audio clips for this segment
+        segment_audio = concatenate_audioclips(audio_clips_to_combine)
+        duration = segment_audio.duration
+
+        # 3. Create/Prepare Image Clip
+        if not img_path.exists():
+            print(f"  [Warning] Image not found for segment {segment_idx}: {img_path}. Skipping segment.")
+            return
+
+        img_clip = ImageClip(str(img_path))
+        
+        # Consistent 9:16 Vertical Framing
+        w, h = img_clip.size
+        target_w, target_h = VIDEO_SIZE
+        scale = max(target_w / w, target_h / h)
+        img_clip = img_clip.resize(scale)
+        img_clip = img_clip.set_position('center')
+        img_clip = img_clip.set_duration(duration)
+
+        # Apply Ken Burns
+        img_clip = self.apply_ken_burns(img_clip, duration)
+        img_clip = img_clip.set_audio(segment_audio)
+        img_clip = img_clip.set_fps(FPS)
+
+        clips_list.append(img_clip)
+        
+        # We do NOT close the audio clips here as they are nested in segment_audio
+        # and needed for the final write. We close them in process_project.
+        for p in sentence_audio_paths:
+            if p.exists(): os.remove(p)
+
+
     async def process_project(self, project):
         project_name = project.get("project_name", "Untitled")
         script_text = project.get("script_text", "")
         
         print(f"\n--- Processing Project: {project_name} ---")
         
-        # 1. Segment script into sentences
         sentences = [s.strip() for s in re.split(r'[.!?]', script_text) if s.strip()]
         
         project_temp_dir = TEMP_DIR / project_name
@@ -84,50 +135,38 @@ class VideoAutomationApp:
         
         clips = []
         
+        # We want segments to be roughly 5-6 seconds.
+        # We will iterate through sentences, generate audio for each, and group them.
+        
+        current_group_text = []
+        current_group_audio_paths = []
+        current_group_duration = 0
+        
+        segment_idx = 0
         for i, sentence in enumerate(sentences):
-            print(f"  Segment {i+1}/{len(sentences)}: {sentence}")
+            # Generate temporary audio for just this sentence to check duration
+            temp_sentence_audio = project_temp_dir / f"temp_s_{i}.mp3"
+            await self.generate_audio_asset(sentence, temp_sentence_audio)
             
-            prompt = self.generate_visual_prompt(sentence)
-            img_path = project_temp_dir / f"img_{i}.png"
-            audio_path = project_temp_dir / f"audio_{i}.mp3"
+            temp_clip = AudioFileClip(str(temp_sentence_audio))
+            d = temp_clip.duration
+            temp_clip.close()
             
-            # Generate Assets
-            self.generate_image_asset(prompt, img_path)
-            # IMPORTANT: Wait for image asset if using internal tools asynchronously
-            # We assume image generation is instantaneous or handled before this script runs.
-            
-            await self.generate_audio_asset(sentence, audio_path)
-            
-            # Load assets and build clip
-            # Using ImageClip. To make it work smoothly, we need the audio duration first.
-            audio_clip = AudioFileClip(str(audio_path))
-            duration = audio_clip.duration
-            
-            # Check if image exists (since it's an external hook)
-            if not img_path.exists():
-                print(f"  [Warning] Image {img_path} not found. Using placeholder.")
-                # Fallback or Skip (In practical use, the agent ensures this exists)
-                continue
-
-            img_clip = ImageClip(str(img_path))
-            
-            # Resize image to cover the vertical frame (9:16)
-            # We want to maintain aspect ratio and fill the screen, so we take the max of width/height ratios
-            w, h = img_clip.size
-            target_w, target_h = VIDEO_SIZE
-            scale = max(target_w / w, target_h / h)
-            img_clip = img_clip.resize(scale)
-            
-            # Center the image
-            img_clip = img_clip.set_position('center')
-            img_clip = img_clip.set_duration(duration)
-            
-            # Apply Ken Burns
-            img_clip = self.apply_ken_burns(img_clip, duration)
-            img_clip = img_clip.set_audio(audio_clip)
-            img_clip = img_clip.set_fps(FPS)
-            
-            clips.append(img_clip)
+            if current_group_duration + d > 6.0 and current_group_text:
+                # Close current group and process as a segment
+                await self.process_segment(current_group_text, current_group_audio_paths, segment_idx, project_temp_dir, clips)
+                segment_idx += 1
+                current_group_text = [sentence]
+                current_group_audio_paths = [temp_sentence_audio]
+                current_group_duration = d
+            else:
+                current_group_text.append(sentence)
+                current_group_audio_paths.append(temp_sentence_audio)
+                current_group_duration += d
+                
+        # Final group
+        if current_group_text:
+            await self.process_segment(current_group_text, current_group_audio_paths, segment_idx, project_temp_dir, clips)
         
         if clips:
             final_video = concatenate_videoclips(clips, method="compose")
@@ -147,6 +186,8 @@ class VideoAutomationApp:
             
             # Close clips to release memory
             for clip in clips:
+                if clip.audio:
+                    clip.audio.close()
                 clip.close()
             final_video.close()
         

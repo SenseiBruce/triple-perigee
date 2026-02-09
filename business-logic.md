@@ -26,10 +26,20 @@ graph TD
 ## Data Flow
 
 ### 1. Input Processing
-- **Source**: `input_scripts.json`
-- **Structure**: Array of project objects
+- **Direct Source**: `input_scripts.json`
+- **Remote Source**: Telegram Bot Messages (via OpenClaw)
+- **Structure**: Array of project objects or raw text messages
   - `project_name`: String identifier
   - `script_text`: Full narrative text
+
+### 2. Messaging Gateway (OpenClaw)
+- **Platform**: Telegram
+- **Bot**: [@Champahitonlybot](https://t.me/Champahitonlybot)
+- **Role**: Serves as the interface for remote control and notification.
+- **Data Flow**:
+  1. User sends script to Telegram Bot.
+  2. OpenClaw receives message and triggers the agent.
+  3. Status updates are sent back to the user via Telegram.
 
 ### 2. Script Segmentation
 - **Method**: Regex split on sentence boundaries (`.`, `!`, `?`)
@@ -99,7 +109,7 @@ def apply_ken_burns(clip, duration, zoom_ratio=1.15):
 - Ensures 16GB RAM constraint is respected
 
 ## Error Handling
-- Missing images trigger warnings and skip segments
+- Missing images trigger warnings and segments are skipped during assembly
 - Project-level try-catch prevents cascade failures
 - Temp cleanup runs even on errors
 
@@ -142,7 +152,13 @@ triple-perigee/
 - Flexible effects API
 - Good ARM64 compatibility
 
-### Why Sequential Processing?
-- Prevents memory overflow on 16GB systems
-- Simpler error recovery
-- Predictable resource usage
+## Infrastructure (OpenClaw)
+- **Primary Model**: `ollama/qwen3:8b` (configured for reasoning)
+- **Context Window**: 40,960 tokens
+- **Gateway**: `openclaw` running on port 18789
+- **Channels**:
+    - **Telegram**: Enabled (bot: @Champahitonlybot)
+    - **WhatsApp**: Enabled
+
+---
+*Last updated: 2026-02-08*
