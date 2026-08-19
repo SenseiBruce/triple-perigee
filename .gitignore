@@ -6,3 +6,11 @@ __pycache__/
 *.png
 image_prompts.json
 .DS_Store
+.venv/
+.venv310/
+.env
+.coverage
+htmlcov/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
