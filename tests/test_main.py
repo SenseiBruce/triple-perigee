@@ -58,6 +58,13 @@ def test_load_input_wraps_oserror_for_unreadable_path(tmp_path: Path) -> None:
         VideoAutomationApp(blocked)
 
 
+def test_load_input_rejects_empty_array(tmp_path: Path) -> None:
+    empty_file = tmp_path / "empty.json"
+    empty_file.write_text("[]", encoding="utf-8")
+    with pytest.raises(VideoAutomationError, match="contains no projects"):
+        VideoAutomationApp(empty_file)
+
+
 def test_load_input_rejects_non_array_json(tmp_path: Path) -> None:
     bad_file = tmp_path / "object.json"
     bad_file.write_text(json.dumps({"project_name": "Nope"}), encoding="utf-8")

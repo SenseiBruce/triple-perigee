@@ -77,6 +77,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--input", default=INPUT_FILE, help="Path to input_scripts.json")
     parser.add_argument("--output-dir", default=str(OUTPUT_DIR), help="Directory for mp4 output")
     parser.add_argument("--temp-dir", default=str(TEMP_DIR), help="Directory for temporary assets")
+    parser.add_argument("--voice", default=VOICE, help="edge-tts voice name")
     return parser.parse_args(argv)
 
 
@@ -185,6 +186,10 @@ class VideoAutomationApp:
         if not isinstance(raw, list):
             raise VideoAutomationError(
                 f"Input file {self.input_file} must contain a JSON array of projects"
+            )
+        if len(raw) == 0:
+            raise VideoAutomationError(
+                f"Input file {self.input_file} contains no projects"
             )
 
         projects: list[dict[str, str]] = []
@@ -413,12 +418,16 @@ class VideoAutomationApp:
             logger.info("Final cleanup completed")
 
 
-if __name__ == "__main__":
+def cli_main(argv: list[str] | None = None) -> None:
     configure_logging()
-    args = parse_args()
+    args = parse_args(argv)
     app = VideoAutomationApp(
         args.input,
         output_dir=Path(args.output_dir),
         temp_dir=Path(args.temp_dir),
     )
     asyncio.run(app.run())
+
+
+if __name__ == "__main__":
+    cli_main()
