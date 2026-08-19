@@ -16,18 +16,28 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            requirements-lock.txt
 
       - name: Install FFmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Install dependencies
+      - name: Install from lockfile
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-dev.txt
+          pip install -r requirements-lock.txt
+
+      - name: Install development dependencies
+        run: pip install -r requirements-dev.txt
 
       - name: Run tests with coverage
         run: pytest --cov=. --cov-fail-under=50 --cov-report=term
 
       - name: Lint
-        run: ruff check main.py generate_images_helper.py tests
+        run: ruff check main.py generate_images_helper.py logging_config.py tests
+
+      - name: Audit dependencies
+        run: pip-audit -r requirements.txt --no-deps --disable-pip
