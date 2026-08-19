@@ -49,13 +49,11 @@ TTS_RETRIES = int(os.getenv("TTS_RETRIES", "3"))
 
 
 class ImageGenerator(Protocol):
-    def __call__(self, visual_prompt: str, output_filename: Path) -> None:
-        ...
+    def __call__(self, visual_prompt: str, output_filename: Path) -> None: ...
 
 
 class AudioGenerator(Protocol):
-    async def __call__(self, text: str, output_filename: Path) -> None:
-        ...
+    async def __call__(self, text: str, output_filename: Path) -> None: ...
 
 
 class VideoAutomationError(Exception):
@@ -175,13 +173,9 @@ class VideoAutomationApp:
             with open(self.input_file, encoding="utf-8") as handle:
                 raw: Any = json.load(handle)
         except FileNotFoundError as exc:
-            raise VideoAutomationError(
-                f"Input file not found: {self.input_file}"
-            ) from exc
+            raise VideoAutomationError(f"Input file not found: {self.input_file}") from exc
         except json.JSONDecodeError as exc:
-            raise VideoAutomationError(
-                f"Input file is not valid JSON: {self.input_file}"
-            ) from exc
+            raise VideoAutomationError(f"Input file is not valid JSON: {self.input_file}") from exc
         except OSError as exc:
             raise VideoAutomationError(
                 f"Failed to read input file {self.input_file}: {exc}"
@@ -192,9 +186,7 @@ class VideoAutomationApp:
                 f"Input file {self.input_file} must contain a JSON array of projects"
             )
         if len(raw) == 0:
-            raise VideoAutomationError(
-                f"Input file {self.input_file} contains no projects"
-            )
+            raise VideoAutomationError(f"Input file {self.input_file} contains no projects")
 
         projects: list[dict[str, str]] = []
         for index, entry in enumerate(raw):

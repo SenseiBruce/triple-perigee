@@ -100,7 +100,9 @@ def test_placeholder_image_generator_writes_png(tmp_path: Path) -> None:
     assert target.stat().st_size > 0
 
 
-def test_generate_tts_audio_retries_then_succeeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_generate_tts_audio_retries_then_succeeds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     attempts = {"count": 0}
 
     class FakeCommunicate:

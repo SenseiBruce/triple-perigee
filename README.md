@@ -119,8 +119,9 @@ To supply a custom image backend, construct `VideoAutomationApp` with an `image_
 from pathlib import Path
 from main import VideoAutomationApp
 
-def my_generator(prompt: str, output_filename: Path) -> None:
-    ...
+
+def my_generator(prompt: str, output_filename: Path) -> None: ...
+
 
 app = VideoAutomationApp("input_scripts.json", image_generator=my_generator)
 ```

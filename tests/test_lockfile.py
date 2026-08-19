@@ -14,7 +14,9 @@ def test_pip_compile_lockfile_pins_runtime_dependencies() -> None:
 
 def test_uv_lockfile_is_committed() -> None:
     lockfile = Path("uv.lock")
-    assert lockfile.exists(), "uv.lock must be committed so package-manager scanners detect a lockfile"
+    assert lockfile.exists(), (
+        "uv.lock must be committed so package-manager scanners detect a lockfile"
+    )
     text = lockfile.read_text(encoding="utf-8")
     assert "moviepy" in text
     assert "python-json-logger" in text

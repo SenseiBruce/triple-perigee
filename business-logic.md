@@ -82,6 +82,7 @@ def apply_ken_burns(clip, duration, zoom_ratio=1.15):
     # Linear zoom interpolation over time
     def effect(t):
         return 1 + (zoom_ratio - 1) * (t / duration)
+
     return clip.resize(effect)
 ```
 
