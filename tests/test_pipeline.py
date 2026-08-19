@@ -47,6 +47,24 @@ def test_process_project_writes_mp4(tmp_path: Path, fixture_input: Path) -> None
     assert expected.stat().st_size > 0
 
 
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is required to encode video")
+def test_run_writes_mp4_with_fake_generators(tmp_path: Path, fixture_input: Path) -> None:
+    app = VideoAutomationApp(
+        fixture_input,
+        image_generator=fake_image_generator,
+        audio_generator=fake_audio_generator,
+        output_dir=tmp_path / "output",
+        temp_dir=tmp_path / "temp",
+        audio_extension=".wav",
+        video_size=(64, 96),
+        fps=8,
+    )
+    asyncio.run(app.run())
+    output = tmp_path / "output" / "Test_Lemon.mp4"
+    assert output.exists()
+    assert output.stat().st_size > 0
+
+
 def test_generate_image_asset_uses_injected_generator(tmp_path: Path, fixture_input: Path) -> None:
     calls: list[tuple[str, Path]] = []
 
