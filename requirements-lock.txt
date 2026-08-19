@@ -19,7 +19,7 @@ moviepy==1.0.3
 multidict==6.7.1
 numpy==1.26.4
 packaging==26.3
-pillow==9.5.0
+pillow==12.3.0
 pluggy==1.6.0
 proglog==0.1.12
 propcache==0.5.2
