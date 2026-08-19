@@ -1,0 +1,15 @@
+.venv
+.venv310
+.git
+.github
+__pycache__
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+output
+temp
+*.egg-info
+.DS_Store
+.env

@@ -7,3 +7,5 @@ services:
     environment:
       INPUT_FILE: input_scripts.json
       LOG_LEVEL: INFO
+      AUDIO_BACKEND: placeholder
+      AUDIO_EXTENSION: .wav
