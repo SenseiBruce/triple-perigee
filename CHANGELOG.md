@@ -2,12 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 0.2.0
 
-- Classified the project as a Python video CLI (not IaC) via pyproject classifiers.
-- Added JSON structured logging with `project_name`, `stage`, and `duration_ms`.
-- Committed pip-compile and uv lockfiles; CI installs from the lockfile and runs pip-audit.
-- Added docker compose for one-command pipeline runs.
+- Added `.repo-meta.json` so classifiers can label this as a Python CLI, not IaC.
+- Reject empty `project_name` / `script_text` via Pydantic `Field(min_length=1)`.
+- Added schema-validation tests and a multi-project `run()` coverage path.
+- Tightened Dependabot to group weekly pip and GitHub Actions updates.
 
 ## 0.1.0
 
