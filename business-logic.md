@@ -57,8 +57,9 @@ graph TD
 
 #### Image Generation
 - **Hook**: `generate_image_asset(visual_prompt, output_filename)`
-- **Integration**: Calls Antigravity's internal `generate_image` tool
-- **Output**: PNG image file in `temp/{project_name}/img_{i}.png`
+- **Integration**: Injectable `ImageGenerator` protocol (default writes a placeholder PNG)
+- **Tests**: A fake generator can be substituted so the pipeline runs without Antigravity or a live API
+- **Output**: PNG image file in `temp/{project_name}/img_segment_{i}.png`
 
 #### Audio Generation
 - **Library**: `edge-tts` (async)
@@ -109,9 +110,11 @@ def apply_ken_burns(clip, duration, zoom_ratio=1.15):
 - Ensures 16GB RAM constraint is respected
 
 ## Error Handling
-- Missing images trigger warnings and segments are skipped during assembly
-- Project-level try-catch prevents cascade failures
-- Temp cleanup runs even on errors
+- Invalid `input_scripts.json` entries raise `VideoAutomationError` after Pydantic validation
+- File I/O and generator failures are wrapped in `VideoAutomationError` with context
+- Missing images are logged with `logger.warning` and the segment is skipped
+- Project-level try/except in `run()` prevents cascade failures
+- Temp cleanup runs in `finally` even on errors
 
 ## Performance Characteristics
 
