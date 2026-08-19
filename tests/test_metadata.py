@@ -8,6 +8,9 @@ def test_pyproject_classifiers_declare_a_python_video_cli() -> None:
     assert "triple-perigee" in text
     assert "terraform" not in text.lower()
     assert 'project_type = "cli"' in text
+    assert "moviepy==1.0.3" in text
+    assert "[project.optional-dependencies]" in text
+    assert "[build-system]" in text
 
 
 def test_readme_declares_project_type_cli() -> None:

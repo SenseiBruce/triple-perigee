@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "triple-perigee"
 version = "0.1.0"
@@ -37,8 +41,14 @@ dev = [
     "mypy==1.13.0",
 ]
 
+[project.scripts]
+triple-perigee = "main:cli_main"
+
 [tool]
 project_type = "cli"
+
+[tool.setuptools]
+py-modules = ["main", "generate_images_helper", "logging_config"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -71,6 +81,7 @@ show_missing = true
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == [\"']__main__[\"']:",
+    "def cli_main",
 ]
 
 [tool.mypy]
