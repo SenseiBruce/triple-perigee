@@ -1,69 +1,72 @@
 #!/usr/bin/env python3
-"""
-Image Generation Helper Script
+"""Build image-generation prompts from input_scripts.json."""
 
-This script pre-generates all images needed for the video automation workflow.
-It parses the input_scripts.json and creates visual prompts for each sentence,
-then outputs a list of prompts that can be used with image generation tools.
-
-Usage:
-    python generate_images_helper.py
-
-This will create a file 'image_prompts.json' with all the prompts needed.
-"""
+from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 
-def generate_visual_prompt(text):
-    """Generate a visual prompt from text."""
-    clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', text).strip()
-    prompt = f"{clean_text}, vertical 9:16 aspect ratio, cinematic lighting, photorealistic, 4k, architectural detail, highly detailed"
-    return prompt
+logger = logging.getLogger(__name__)
 
-def main():
-    # Load input scripts
-    with open('input_scripts.json', 'r') as f:
-        projects = json.load(f)
-    
-    all_prompts = []
-    
+PROMPT_SUFFIX = (
+    "vertical 9:16 aspect ratio, cinematic lighting, photorealistic, 4k, "
+    "architectural detail, highly detailed"
+)
+
+
+def generate_visual_prompt(text: str) -> str:
+    """Generate a visual prompt from a script sentence."""
+    clean_text = re.sub(r"[^a-zA-Z0-9\s]", "", text).strip()
+    return f"{clean_text}, {PROMPT_SUFFIX}"
+
+
+def collect_prompts(projects: list[dict]) -> list[dict]:
+    """Turn project scripts into per-sentence image prompts."""
+    all_prompts: list[dict] = []
+
     for project in projects:
         project_name = project.get("project_name", "Untitled")
         script_text = project.get("script_text", "")
-        
-        # Segment script
-        sentences = [s.strip() for s in re.split(r'[.!?]', script_text) if s.strip()]
-        
-        project_prompts = {
-            "project_name": project_name,
-            "segments": []
-        }
-        
-        for i, sentence in enumerate(sentences):
-            prompt = generate_visual_prompt(sentence)
-            project_prompts["segments"].append({
-                "index": i,
-                "sentence": sentence,
-                "visual_prompt": prompt,
-                "output_path": f"temp/{project_name}/img_{i}.png"
-            })
-        
+        sentences = [part.strip() for part in re.split(r"[.!?]", script_text) if part.strip()]
+
+        project_prompts = {"project_name": project_name, "segments": []}
+        for index, sentence in enumerate(sentences):
+            project_prompts["segments"].append(
+                {
+                    "index": index,
+                    "sentence": sentence,
+                    "visual_prompt": generate_visual_prompt(sentence),
+                    "output_path": f"temp/{project_name}/img_{index}.png",
+                }
+            )
         all_prompts.append(project_prompts)
-    
-    # Save to file
-    with open('image_prompts.json', 'w') as f:
-        json.dump(all_prompts, f, indent=2)
-    
-    print("✅ Generated image_prompts.json")
-    print(f"📊 Total projects: {len(all_prompts)}")
-    print(f"📸 Total images needed: {sum(len(p['segments']) for p in all_prompts)}")
-    print("\nNext steps:")
-    print("1. Review image_prompts.json")
-    print("2. Generate images using your preferred tool (Antigravity, DALL-E, etc.)")
-    print("3. Place images in the paths specified in 'output_path'")
-    print("4. Run: python main.py")
+
+    return all_prompts
+
+
+def main(
+    input_path: str | Path = "input_scripts.json",
+    output_path: str | Path = "image_prompts.json",
+) -> list[dict]:
+    input_file = Path(input_path)
+    with open(input_file, encoding="utf-8") as handle:
+        projects = json.load(handle)
+
+    all_prompts = collect_prompts(projects)
+
+    output_file = Path(output_path)
+    with open(output_file, "w", encoding="utf-8") as handle:
+        json.dump(all_prompts, handle, indent=2)
+
+    total_images = sum(len(project["segments"]) for project in all_prompts)
+    logger.info("Wrote %s", output_file)
+    logger.info("Total projects: %s", len(all_prompts))
+    logger.info("Total images needed: %s", total_images)
+    return all_prompts
+
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     main()

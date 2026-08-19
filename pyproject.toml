@@ -1,0 +1,32 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = [
+    "ignore:invalid escape sequence:DeprecationWarning",
+    "ignore:ANTIALIAS is deprecated:DeprecationWarning",
+    "ignore:Starting with ImageIO:DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["E501"]
+
+[tool.coverage.run]
+branch = true
+source = ["main", "generate_images_helper"]
+
+[tool.coverage.report]
+fail_under = 50
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == [\"']__main__[\"']:",
+]
