@@ -146,6 +146,34 @@ def test_run_continues_after_a_failed_project(tmp_path: Path) -> None:
     assert (tmp_path / "output" / "Good.mp4").exists()
 
 
+def test_run_creates_mp4_for_every_project(tmp_path: Path, multi_project_input: Path) -> None:
+    async def silent_audio(text: str, output_filename: Path) -> None:
+        from tests.media_utils import write_silence_wav
+
+        write_silence_wav(Path(output_filename), duration=0.3)
+
+    def fake_image(prompt: str, output_filename: Path) -> None:
+        from tests.media_utils import write_placeholder_png
+
+        write_placeholder_png(Path(output_filename))
+
+    app = VideoAutomationApp(
+        multi_project_input,
+        image_generator=fake_image,
+        audio_generator=silent_audio,
+        output_dir=tmp_path / "output",
+        temp_dir=tmp_path / "temp",
+        audio_extension=".wav",
+        video_size=(64, 96),
+        fps=8,
+    )
+    asyncio.run(app.run())
+    for name in ("Test_Lemon", "Test_Lake"):
+        video = tmp_path / "output" / f"{name}.mp4"
+        assert video.exists(), name
+        assert video.stat().st_size > 0, name
+
+
 def test_apply_ken_burns_interpolates_zoom() -> None:
     app = VideoAutomationApp(Path("tests/fixtures/input_scripts.json"))
 
