@@ -63,7 +63,7 @@ propcache==0.5.2
     #   yarl
 pydantic==2.13.4
     # via -r requirements.txt
-pydantic-core==2.46.4
+pydantic-core==2.48.0
     # via pydantic
 python-json-logger==3.3.0
     # via -r requirements.txt
