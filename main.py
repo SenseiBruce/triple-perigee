@@ -28,7 +28,7 @@ from moviepy.editor import (
     concatenate_audioclips,
     concatenate_videoclips,
 )
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 from logging_config import configure_logging, log_pipeline_event
 
@@ -63,8 +63,8 @@ class VideoAutomationError(Exception):
 
 
 class ProjectSchema(BaseModel):
-    project_name: str
-    script_text: str
+    project_name: str = Field(min_length=1)
+    script_text: str = Field(min_length=1)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
