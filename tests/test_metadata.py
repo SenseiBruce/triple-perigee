@@ -17,3 +17,9 @@ def test_readme_declares_project_type_cli() -> None:
     text = Path("README.md").read_text(encoding="utf-8")
     assert "project_type: cli" in text
     assert "not an infrastructure/IaC project" in text
+
+
+def test_repo_meta_json_marks_cli_not_infra() -> None:
+    text = Path(".repo-meta.json").read_text(encoding="utf-8")
+    assert '"project_type": "cli"' in text
+    assert '"not_infrastructure": true' in text

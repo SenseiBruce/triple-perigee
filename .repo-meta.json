@@ -1,0 +1,7 @@
+{
+  "project_type": "cli",
+  "primary_class": "cli",
+  "language": "python",
+  "not_infrastructure": true,
+  "not_iac": true
+}
