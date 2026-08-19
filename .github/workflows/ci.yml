@@ -33,11 +33,26 @@ jobs:
       - name: Install development dependencies
         run: pip install -r requirements-dev.txt
 
-      - name: Run tests with coverage
-        run: pytest --cov=. --cov-fail-under=50 --cov-report=term
+      - name: Test
+        run: pytest --cov=. --cov-fail-under=75 --cov-report=term
 
       - name: Lint
         run: ruff check main.py generate_images_helper.py logging_config.py tests
 
+      - name: Typecheck
+        run: mypy main.py generate_images_helper.py logging_config.py
+
       - name: Audit dependencies
         run: pip-audit -r requirements.txt --no-deps --disable-pip
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Smoke test docker compose
+        run: docker compose up --build --abort-on-container-exit
+
+      - name: Assert output video exists
+        run: test -s output/Test_Lemon.mp4
