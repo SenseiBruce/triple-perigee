@@ -6,7 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from main import VideoAutomationApp, generate_placeholder_image
+from main import (
+    VideoAutomationApp,
+    VideoAutomationError,
+    generate_placeholder_audio,
+    generate_placeholder_image,
+    generate_tts_audio,
+)
 from tests.media_utils import write_placeholder_png, write_silence_wav
 
 
@@ -58,8 +64,51 @@ def test_generate_image_asset_uses_injected_generator(tmp_path: Path, fixture_in
     assert target.exists()
 
 
+def test_placeholder_audio_writes_wav(tmp_path: Path) -> None:
+    target = tmp_path / "silence.wav"
+    asyncio.run(generate_placeholder_audio("ignored", target))
+    assert target.exists()
+    assert target.stat().st_size > 0
+
+
 def test_placeholder_image_generator_writes_png(tmp_path: Path) -> None:
     target = tmp_path / "placeholder.png"
     generate_placeholder_image("a quiet harbor at dusk", target)
     assert target.exists()
     assert target.stat().st_size > 0
+
+
+def test_generate_tts_audio_retries_then_succeeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    attempts = {"count": 0}
+
+    class FakeCommunicate:
+        def __init__(self, text: str, voice: str) -> None:
+            self.text = text
+            self.voice = voice
+
+        async def save(self, path: str) -> None:
+            attempts["count"] += 1
+            if attempts["count"] < 3:
+                raise ConnectionError("transient tts failure")
+            Path(path).write_bytes(b"ok")
+
+    monkeypatch.setattr("main.edge_tts.Communicate", FakeCommunicate)
+    output = tmp_path / "speech.mp3"
+    asyncio.run(generate_tts_audio("Hello there.", output, retries=3))
+    assert attempts["count"] == 3
+    assert output.read_bytes() == b"ok"
+
+
+def test_generate_tts_audio_raises_after_retries_exhausted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    class AlwaysFail:
+        def __init__(self, text: str, voice: str) -> None:
+            pass
+
+        async def save(self, path: str) -> None:
+            raise ConnectionError("tts down")
+
+    monkeypatch.setattr("main.edge_tts.Communicate", AlwaysFail)
+    with pytest.raises(VideoAutomationError, match="TTS generation failed after 2 attempts"):
+        asyncio.run(generate_tts_audio("Hello", tmp_path / "speech.mp3", retries=2))

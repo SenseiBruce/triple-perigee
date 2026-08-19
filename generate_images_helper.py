@@ -8,6 +8,7 @@ import logging
 import re
 import time
 from pathlib import Path
+from typing import Any
 
 from logging_config import configure_logging, log_pipeline_event
 
@@ -25,16 +26,16 @@ def generate_visual_prompt(text: str) -> str:
     return f"{clean_text}, {PROMPT_SUFFIX}"
 
 
-def collect_prompts(projects: list[dict]) -> list[dict]:
+def collect_prompts(projects: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Turn project scripts into per-sentence image prompts."""
-    all_prompts: list[dict] = []
+    all_prompts: list[dict[str, Any]] = []
 
     for project in projects:
-        project_name = project.get("project_name", "Untitled")
-        script_text = project.get("script_text", "")
+        project_name = str(project.get("project_name", "Untitled"))
+        script_text = str(project.get("script_text", ""))
         sentences = [part.strip() for part in re.split(r"[.!?]", script_text) if part.strip()]
 
-        project_prompts = {"project_name": project_name, "segments": []}
+        project_prompts: dict[str, Any] = {"project_name": project_name, "segments": []}
         for index, sentence in enumerate(sentences):
             project_prompts["segments"].append(
                 {
@@ -52,11 +53,13 @@ def collect_prompts(projects: list[dict]) -> list[dict]:
 def main(
     input_path: str | Path = "input_scripts.json",
     output_path: str | Path = "image_prompts.json",
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     started = time.perf_counter()
     input_file = Path(input_path)
     with open(input_file, encoding="utf-8") as handle:
         projects = json.load(handle)
+    if not isinstance(projects, list):
+        raise TypeError(f"{input_file} must contain a JSON array")
 
     all_prompts = collect_prompts(projects)
 
@@ -65,7 +68,7 @@ def main(
         json.dump(all_prompts, handle, indent=2)
 
     total_images = sum(len(project["segments"]) for project in all_prompts)
-    first_project = all_prompts[0]["project_name"] if all_prompts else "none"
+    first_project = str(all_prompts[0]["project_name"]) if all_prompts else "none"
     log_pipeline_event(
         logger,
         "Wrote image prompts",

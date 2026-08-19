@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import gc
 import json
@@ -8,17 +9,18 @@ import os
 import re
 import shutil
 import time
+import wave
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 import edge_tts
 import numpy as np
 from PIL import Image
 
 if not hasattr(np, "float"):
-    np.float = float  # moviepy 1.0.3 compatibility with NumPy 1.24+
+    np.float = float  # type: ignore[attr-defined]
 if not hasattr(Image, "ANTIALIAS"):
-    Image.ANTIALIAS = Image.Resampling.LANCZOS  # moviepy 1.0.3 compatibility with Pillow 10+
+    Image.ANTIALIAS = Image.Resampling.LANCZOS  # type: ignore[attr-defined]
 
 from moviepy.editor import (
     AudioFileClip,
@@ -41,6 +43,10 @@ VIDEO_SIZE = (
     int(os.getenv("VIDEO_HEIGHT", "1920")),
 )
 INPUT_FILE = os.getenv("INPUT_FILE", "input_scripts.json")
+AUDIO_BACKEND = os.getenv("AUDIO_BACKEND", "edge-tts")
+AUDIO_EXTENSION = os.getenv("AUDIO_EXTENSION", ".mp3")
+TTS_RETRIES = int(os.getenv("TTS_RETRIES", "3"))
+
 
 class ImageGenerator(Protocol):
     def __call__(self, visual_prompt: str, output_filename: Path) -> None:
@@ -61,10 +67,21 @@ class ProjectSchema(BaseModel):
     script_text: str
 
 
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Python CLI that turns JSON scripts into videos. "
+            "This is not an infrastructure/IaC project."
+        )
+    )
+    parser.add_argument("--input", default=INPUT_FILE, help="Path to input_scripts.json")
+    parser.add_argument("--output-dir", default=str(OUTPUT_DIR), help="Directory for mp4 output")
+    parser.add_argument("--temp-dir", default=str(TEMP_DIR), help="Directory for temporary assets")
+    return parser.parse_args(argv)
+
+
 def generate_placeholder_image(visual_prompt: str, output_filename: Path) -> None:
     """Write a solid 9:16 PNG so the pipeline can run without an external image API."""
-    from PIL import Image
-
     output_path = Path(output_filename)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     image = Image.new("RGB", VIDEO_SIZE, color=(18, 32, 64))
@@ -72,17 +89,58 @@ def generate_placeholder_image(visual_prompt: str, output_filename: Path) -> Non
     logger.info("Wrote placeholder image to %s (prompt=%s)", output_path, visual_prompt)
 
 
-async def generate_tts_audio(text: str, output_filename: Path) -> None:
+def write_silence_wav(path: Path, duration: float = 0.4, rate: int = 22050) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    n_frames = max(1, int(duration * rate))
+    with wave.open(str(path), "wb") as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(rate)
+        wav_file.writeframes(b"\x00\x00" * n_frames)
+
+
+async def generate_placeholder_audio(text: str, output_filename: Path) -> None:
     started = time.perf_counter()
-    communicate = edge_tts.Communicate(text, VOICE)
-    await communicate.save(str(output_filename))
+    write_silence_wav(Path(output_filename))
     log_pipeline_event(
         logger,
-        "Generated TTS audio",
+        "Generated placeholder audio",
         project_name="unknown",
-        stage="generate_tts_audio",
+        stage="generate_placeholder_audio",
         duration_ms=round((time.perf_counter() - started) * 1000, 2),
     )
+
+
+async def generate_tts_audio(
+    text: str,
+    output_filename: Path,
+    retries: int = TTS_RETRIES,
+) -> None:
+    started = time.perf_counter()
+    last_error: Exception | None = None
+    attempts = max(1, retries)
+    for attempt in range(1, attempts + 1):
+        try:
+            communicate = edge_tts.Communicate(text, VOICE)
+            await communicate.save(str(output_filename))
+            log_pipeline_event(
+                logger,
+                "Generated TTS audio",
+                project_name="unknown",
+                stage="generate_tts_audio",
+                duration_ms=round((time.perf_counter() - started) * 1000, 2),
+            )
+            return
+        except Exception as exc:
+            last_error = exc
+            logger.warning("TTS attempt %s/%s failed: %s", attempt, attempts, exc)
+    raise VideoAutomationError(f"TTS generation failed after {attempts} attempts") from last_error
+
+
+def default_audio_generator() -> AudioGenerator:
+    if AUDIO_BACKEND == "placeholder":
+        return generate_placeholder_audio
+    return generate_tts_audio
 
 
 class VideoAutomationApp:
@@ -93,16 +151,16 @@ class VideoAutomationApp:
         audio_generator: AudioGenerator | None = None,
         output_dir: Path | None = None,
         temp_dir: Path | None = None,
-        audio_extension: str = ".mp3",
+        audio_extension: str | None = None,
         video_size: tuple[int, int] | None = None,
         fps: int | None = None,
     ) -> None:
         self.input_file = Path(input_file)
         self.image_generator = image_generator or generate_placeholder_image
-        self.audio_generator = audio_generator or generate_tts_audio
+        self.audio_generator = audio_generator or default_audio_generator()
         self.output_dir = Path(output_dir) if output_dir is not None else OUTPUT_DIR
         self.temp_dir = Path(temp_dir) if temp_dir is not None else TEMP_DIR
-        self.audio_extension = audio_extension
+        self.audio_extension = audio_extension or AUDIO_EXTENSION
         self.video_size = video_size or VIDEO_SIZE
         self.fps = fps if fps is not None else FPS
         self.projects = self._load_input()
@@ -110,7 +168,7 @@ class VideoAutomationApp:
     def _load_input(self) -> list[dict[str, str]]:
         try:
             with open(self.input_file, encoding="utf-8") as handle:
-                raw = json.load(handle)
+                raw: Any = json.load(handle)
         except FileNotFoundError as exc:
             raise VideoAutomationError(
                 f"Input file not found: {self.input_file}"
@@ -135,7 +193,7 @@ class VideoAutomationApp:
                 projects.append(ProjectSchema.model_validate(entry).model_dump())
             except ValidationError as exc:
                 if isinstance(entry, dict):
-                    offending = entry.get("project_name", f"index {index}")
+                    offending = str(entry.get("project_name", f"index {index}"))
                 else:
                     offending = f"index {index}"
                 raise VideoAutomationError(
@@ -172,7 +230,7 @@ class VideoAutomationApp:
                 f"Audio generation failed for {output_filename}: {exc}"
             ) from exc
 
-    def apply_ken_burns(self, clip: ImageClip, duration: float, zoom_ratio: float = 1.15):
+    def apply_ken_burns(self, clip: Any, duration: float, zoom_ratio: float = 1.15) -> Any:
         """Apply a smooth Ken Burns (slow zoom) effect to an ImageClip."""
 
         def effect(t: float) -> float:
@@ -186,7 +244,7 @@ class VideoAutomationApp:
         sentence_audio_paths: list[Path],
         segment_idx: int,
         project_temp_dir: Path,
-        clips_list: list,
+        clips_list: list[Any],
         project_name: str,
     ) -> None:
         started = time.perf_counter()
@@ -202,7 +260,7 @@ class VideoAutomationApp:
             return
 
         segment_audio = concatenate_audioclips(audio_clips_to_combine)
-        duration = segment_audio.duration
+        duration = float(segment_audio.duration or 0.0)
 
         if not img_path.exists():
             logger.warning(
@@ -254,7 +312,7 @@ class VideoAutomationApp:
         project_temp_dir = self.temp_dir / project_name
         project_temp_dir.mkdir(parents=True, exist_ok=True)
 
-        clips: list = []
+        clips: list[Any] = []
         current_group_text: list[str] = []
         current_group_audio_paths: list[Path] = []
         current_group_duration = 0.0
@@ -267,7 +325,7 @@ class VideoAutomationApp:
                 await self.generate_audio_asset(sentence, temp_sentence_audio)
 
                 temp_clip = AudioFileClip(str(temp_sentence_audio))
-                duration = temp_clip.duration
+                duration = float(temp_clip.duration or 0.0)
                 temp_clip.close()
 
                 if current_group_duration + duration > 6.0 and current_group_text:
@@ -357,5 +415,10 @@ class VideoAutomationApp:
 
 if __name__ == "__main__":
     configure_logging()
-    app = VideoAutomationApp(INPUT_FILE)
+    args = parse_args()
+    app = VideoAutomationApp(
+        args.input,
+        output_dir=Path(args.output_dir),
+        temp_dir=Path(args.temp_dir),
+    )
     asyncio.run(app.run())

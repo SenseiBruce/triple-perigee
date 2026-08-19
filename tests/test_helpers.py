@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from generate_images_helper import collect_prompts, generate_visual_prompt, main
 
 
@@ -35,6 +37,13 @@ def test_collect_prompts_builds_segment_paths() -> None:
     assert len(result[0]["segments"]) == 2
     assert result[0]["segments"][0]["output_path"] == "temp/Demo/img_0.png"
     assert result[0]["segments"][1]["sentence"] == "Second sentence"
+
+
+def test_main_rejects_non_array_input(tmp_path: Path) -> None:
+    bad = tmp_path / "obj.json"
+    bad.write_text('{"project_name": "x"}', encoding="utf-8")
+    with pytest.raises(TypeError, match="JSON array"):
+        main(bad, tmp_path / "out.json")
 
 
 def test_main_writes_image_prompts_json(tmp_path: Path, fixture_input: Path) -> None:
