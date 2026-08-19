@@ -5,6 +5,7 @@ All notable changes to this project are documented in this file.
 ## Unreleased
 
 - Documented `detected_frameworks` so classifiers treat this as a CLI, not IaC.
+- Added exponential backoff between TTS retries.
 
 ## 0.2.0
 

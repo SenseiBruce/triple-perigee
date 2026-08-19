@@ -111,9 +111,16 @@ def test_generate_tts_audio_retries_then_succeeds(tmp_path: Path, monkeypatch: p
             Path(path).write_bytes(b"ok")
 
     monkeypatch.setattr("main.edge_tts.Communicate", FakeCommunicate)
+    sleeps: list[float] = []
+
+    async def fake_sleep(delay: float) -> None:
+        sleeps.append(delay)
+
+    monkeypatch.setattr("main.asyncio.sleep", fake_sleep)
     output = tmp_path / "speech.mp3"
-    asyncio.run(generate_tts_audio("Hello there.", output, retries=3))
+    asyncio.run(generate_tts_audio("Hello there.", output, retries=3, backoff_seconds=0.1))
     assert attempts["count"] == 3
+    assert sleeps == [0.1, 0.2]
     assert output.read_bytes() == b"ok"
 
 
@@ -128,5 +135,12 @@ def test_generate_tts_audio_raises_after_retries_exhausted(
             raise ConnectionError("tts down")
 
     monkeypatch.setattr("main.edge_tts.Communicate", AlwaysFail)
+
+    async def no_sleep(_delay: float) -> None:
+        return None
+
+    monkeypatch.setattr("main.asyncio.sleep", no_sleep)
     with pytest.raises(VideoAutomationError, match="TTS generation failed after 2 attempts"):
-        asyncio.run(generate_tts_audio("Hello", tmp_path / "speech.mp3", retries=2))
+        asyncio.run(
+            generate_tts_audio("Hello", tmp_path / "speech.mp3", retries=2, backoff_seconds=0.01)
+        )

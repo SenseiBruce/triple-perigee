@@ -116,6 +116,7 @@ async def generate_tts_audio(
     text: str,
     output_filename: Path,
     retries: int = TTS_RETRIES,
+    backoff_seconds: float = 0.05,
 ) -> None:
     started = time.perf_counter()
     last_error: Exception | None = None
@@ -135,6 +136,9 @@ async def generate_tts_audio(
         except Exception as exc:
             last_error = exc
             logger.warning("TTS attempt %s/%s failed: %s", attempt, attempts, exc)
+            if attempt < attempts:
+                delay = backoff_seconds * (2 ** (attempt - 1))
+                await asyncio.sleep(delay)
     raise VideoAutomationError(f"TTS generation failed after {attempts} attempts") from last_error
 
 
