@@ -47,6 +47,9 @@ jobs:
       - name: Lint
         run: ruff check main.py generate_images_helper.py logging_config.py tests
 
+      - name: Format
+        run: ruff format --check .
+
       - name: Typecheck
         run: mypy main.py generate_images_helper.py logging_config.py
 
