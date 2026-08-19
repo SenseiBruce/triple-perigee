@@ -7,14 +7,18 @@ import logging
 import os
 import re
 import shutil
+import time
 from pathlib import Path
 from typing import Protocol
 
 import edge_tts
 import numpy as np
+from PIL import Image
 
 if not hasattr(np, "float"):
     np.float = float  # moviepy 1.0.3 compatibility with NumPy 1.24+
+if not hasattr(Image, "ANTIALIAS"):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS  # moviepy 1.0.3 compatibility with Pillow 10+
 
 from moviepy.editor import (
     AudioFileClip,
@@ -23,6 +27,8 @@ from moviepy.editor import (
     concatenate_videoclips,
 )
 from pydantic import BaseModel, ValidationError
+
+from logging_config import configure_logging, log_pipeline_event
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +41,6 @@ VIDEO_SIZE = (
     int(os.getenv("VIDEO_HEIGHT", "1920")),
 )
 INPUT_FILE = os.getenv("INPUT_FILE", "input_scripts.json")
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 class ImageGenerator(Protocol):
     def __call__(self, visual_prompt: str, output_filename: Path) -> None:
@@ -68,8 +73,16 @@ def generate_placeholder_image(visual_prompt: str, output_filename: Path) -> Non
 
 
 async def generate_tts_audio(text: str, output_filename: Path) -> None:
+    started = time.perf_counter()
     communicate = edge_tts.Communicate(text, VOICE)
     await communicate.save(str(output_filename))
+    log_pipeline_event(
+        logger,
+        "Generated TTS audio",
+        project_name="unknown",
+        stage="generate_tts_audio",
+        duration_ms=round((time.perf_counter() - started) * 1000, 2),
+    )
 
 
 class VideoAutomationApp:
@@ -174,7 +187,9 @@ class VideoAutomationApp:
         segment_idx: int,
         project_temp_dir: Path,
         clips_list: list,
+        project_name: str,
     ) -> None:
+        started = time.perf_counter()
         combined_text = " ".join(segment_texts)
         logger.info("Processing segment %s: %s", segment_idx + 1, combined_text[:70])
 
@@ -216,9 +231,18 @@ class VideoAutomationApp:
             if path.exists():
                 path.unlink()
 
+        log_pipeline_event(
+            logger,
+            "Processed segment",
+            project_name=project_name,
+            stage="process_segment",
+            duration_ms=round((time.perf_counter() - started) * 1000, 2),
+        )
+
     async def process_project(self, project: dict[str, str]) -> Path | None:
         project_name = project["project_name"]
         script_text = project["script_text"]
+        started = time.perf_counter()
 
         logger.info("Processing project: %s", project_name)
 
@@ -253,6 +277,7 @@ class VideoAutomationApp:
                         segment_idx,
                         project_temp_dir,
                         clips,
+                        project_name,
                     )
                     segment_idx += 1
                     current_group_text = [sentence]
@@ -270,6 +295,7 @@ class VideoAutomationApp:
                     segment_idx,
                     project_temp_dir,
                     clips,
+                    project_name,
                 )
 
             if clips:
@@ -305,6 +331,13 @@ class VideoAutomationApp:
                 logger.info("Cleaned up temp files for %s", project_name)
             gc.collect()
 
+        log_pipeline_event(
+            logger,
+            "Finished project",
+            project_name=project_name,
+            stage="process_project",
+            duration_ms=round((time.perf_counter() - started) * 1000, 2),
+        )
         return output_path
 
     async def run(self) -> None:
@@ -320,13 +353,6 @@ class VideoAutomationApp:
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
             logger.info("Final cleanup completed")
-
-
-def configure_logging() -> None:
-    logging.basicConfig(
-        level=getattr(logging, LOG_LEVEL.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
 
 
 if __name__ == "__main__":

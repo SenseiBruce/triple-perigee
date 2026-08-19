@@ -6,7 +6,10 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from pathlib import Path
+
+from logging_config import configure_logging, log_pipeline_event
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +53,7 @@ def main(
     input_path: str | Path = "input_scripts.json",
     output_path: str | Path = "image_prompts.json",
 ) -> list[dict]:
+    started = time.perf_counter()
     input_file = Path(input_path)
     with open(input_file, encoding="utf-8") as handle:
         projects = json.load(handle)
@@ -61,6 +65,14 @@ def main(
         json.dump(all_prompts, handle, indent=2)
 
     total_images = sum(len(project["segments"]) for project in all_prompts)
+    first_project = all_prompts[0]["project_name"] if all_prompts else "none"
+    log_pipeline_event(
+        logger,
+        "Wrote image prompts",
+        project_name=first_project,
+        stage="collect_prompts",
+        duration_ms=round((time.perf_counter() - started) * 1000, 2),
+    )
     logger.info("Wrote %s", output_file)
     logger.info("Total projects: %s", len(all_prompts))
     logger.info("Total images needed: %s", total_images)
@@ -68,5 +80,5 @@ def main(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    configure_logging()
     main()
