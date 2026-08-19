@@ -44,6 +44,29 @@ sudo apt-get install ffmpeg  # Debian/Ubuntu
 
 Optional environment variables are listed in `.env.example`.
 
+## Dependencies
+
+Runtime packages (`[project.dependencies]` / `requirements.txt`):
+
+- `moviepy==1.0.3`
+- `edge-tts==7.2.8`
+- `numpy==1.26.4`
+- `Pillow==12.3.0`
+- `proglog==0.1.12`
+- `pydantic==2.13.4`
+- `python-json-logger==3.3.0`
+
+Development packages (`[project.optional-dependencies].dev` / `requirements-dev.txt`):
+
+- `pytest==9.1.1`
+- `pytest-cov==7.1.0`
+- `ruff==0.16.3`
+- `pip-audit==2.9.0`
+- `pip-tools==7.4.1`
+- `mypy==1.13.0`
+
+Install runtime with `pip install -r requirements.txt`. Install the test/lint toolchain with `pip install -r requirements-dev.txt`.
+
 ### Docker
 
 From a fresh clone:
