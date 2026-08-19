@@ -1,0 +1,9 @@
+services:
+  video-pipeline:
+    build: .
+    volumes:
+      - ./output:/app/output
+      - ./tests/fixtures/input_scripts.json:/app/input_scripts.json:ro
+    environment:
+      INPUT_FILE: input_scripts.json
+      LOG_LEVEL: INFO

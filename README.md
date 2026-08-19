@@ -1,6 +1,6 @@
 # Video Automation Application
 
-A modular Python application that automates video creation from JSON scripts with generated images, human-like text-to-speech, and cinematic Ken Burns effects.
+A **Python CLI** (not an infrastructure/IaC project) that turns JSON scripts into videos with generated images, human-like text-to-speech, and cinematic Ken Burns effects.
 
 ## Features
 
@@ -44,10 +44,13 @@ Optional environment variables are listed in `.env.example`.
 
 ### Docker
 
+From a fresh clone:
+
 ```bash
-docker build -t triple-perigee .
-docker run --rm -v "$PWD/output:/app/output" -v "$PWD/input_scripts.json:/app/input_scripts.json" triple-perigee
+docker compose up --build
 ```
+
+This builds the image, mounts `tests/fixtures/input_scripts.json`, and writes `output/Test_Lemon.mp4`. FFmpeg is already in the image; the container needs network access for `edge-tts`.
 
 ## Tests
 
@@ -129,12 +132,15 @@ See [business-logic.md](business-logic.md) for detailed architecture and data fl
 triple-perigee/
 ├── main.py                 # Core application
 ├── generate_images_helper.py
+├── logging_config.py       # JSON structured logging
 ├── requirements.txt        # Direct runtime dependencies
-├── requirements-dev.txt    # Pytest, coverage, ruff
-├── requirements-lock.txt   # Fully pinned transitive lockfile
-├── tests/                  # Unit and pipeline tests
+├── requirements-dev.txt    # Pytest, coverage, ruff, pip-audit, pip-tools
+├── requirements-lock.txt   # pip-compile lockfile
+├── uv.lock                 # uv lockfile
+├── docker-compose.yml
 ├── Dockerfile
 ├── .env.example
+├── tests/                  # Unit and pipeline tests
 ├── input_scripts.json
 ├── temp/                   # Temporary assets (auto-deleted)
 └── output/                 # Final videos
