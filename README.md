@@ -1,6 +1,8 @@
 # Video Automation Application
 
-A **Python CLI** (not an infrastructure/IaC project) that turns JSON scripts into videos with generated images, human-like text-to-speech, and cinematic Ken Burns effects.
+project_type: cli
+
+This is a **Python CLI** for video generation, **not an infrastructure/IaC project**. There is no Terraform, Kubernetes, Helm, Pulumi, or Ansible in this repository. It turns JSON scripts into videos with generated images, human-like text-to-speech, and cinematic Ken Burns effects.
 
 ## Features
 
@@ -50,7 +52,7 @@ From a fresh clone:
 docker compose up --build
 ```
 
-This builds the image, mounts `tests/fixtures/input_scripts.json`, and writes `output/Test_Lemon.mp4`. FFmpeg is already in the image; the container needs network access for `edge-tts`.
+This builds the image, mounts `tests/fixtures/input_scripts.json`, and writes `output/Test_Lemon.mp4`. Compose uses placeholder audio (`AUDIO_BACKEND=placeholder`) so a fresh clone does not need Microsoft TTS. To use neural voices in Docker, set `AUDIO_BACKEND=edge-tts` and `AUDIO_EXTENSION=.mp3`.
 
 ## Tests
 
@@ -68,6 +70,7 @@ CI runs the same commands on every push and pull request.
 
 ```bash
 python main.py
+python main.py --input input_scripts.json --output-dir output
 ```
 
 This will:

@@ -34,7 +34,11 @@ dev = [
     "ruff==0.16.3",
     "pip-audit==2.9.0",
     "pip-tools==7.4.1",
+    "mypy==1.13.0",
 ]
+
+[tool]
+project_type = "cli"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -62,9 +66,19 @@ branch = true
 source = ["main", "generate_images_helper", "logging_config"]
 
 [tool.coverage.report]
-fail_under = 50
+fail_under = 75
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
     "if __name__ == [\"']__main__[\"']:",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+files = [
+    "main.py",
+    "generate_images_helper.py",
+    "logging_config.py",
 ]
