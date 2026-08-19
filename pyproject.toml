@@ -18,7 +18,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 dependencies = [
-    "moviepy==1.0.3",
+    "moviepy==2.2.1",
     "edge-tts==7.2.8",
     "numpy==1.26.4",
     "Pillow==12.3.0",

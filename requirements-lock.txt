@@ -38,7 +38,7 @@ imageio==2.37.4
     # via moviepy
 imageio-ffmpeg==0.6.0
     # via moviepy
-moviepy==1.0.3
+moviepy==2.2.1
     # via -r requirements.txt
 multidict==6.7.1
     # via
