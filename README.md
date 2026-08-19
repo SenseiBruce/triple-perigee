@@ -2,6 +2,14 @@
 
 project_type: cli
 
+## Classification
+
+This repository is a **Python CLI / backend video pipeline**, not infrastructure.
+
+- `project_type: cli`
+- `detected_frameworks: Docker, Docker Compose, Dev Container, Pydantic`
+- Not Terraform, Kubernetes, Helm, Pulumi, or Ansible (`terraform_file_count: 0`, `k8s_manifest_count: 0`)
+
 This is a **Python CLI** for video generation, **not an infrastructure/IaC project**. There is no Terraform, Kubernetes, Helm, Pulumi, or Ansible in this repository. It turns JSON scripts into videos with generated images, human-like text-to-speech, and cinematic Ken Burns effects.
 
 ## Features

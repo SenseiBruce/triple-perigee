@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## Unreleased
+
+- Documented `detected_frameworks` so classifiers treat this as a CLI, not IaC.
+
 ## 0.2.0
 
 - Added `.repo-meta.json` so classifiers can label this as a Python CLI, not IaC.

@@ -16,6 +16,7 @@ def test_pyproject_classifiers_declare_a_python_video_cli() -> None:
 def test_readme_declares_project_type_cli() -> None:
     text = Path("README.md").read_text(encoding="utf-8")
     assert "project_type: cli" in text
+    assert "detected_frameworks: Docker, Docker Compose, Dev Container, Pydantic" in text
     assert "not an infrastructure/IaC project" in text
 
 
