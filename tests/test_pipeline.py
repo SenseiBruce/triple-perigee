@@ -16,6 +16,12 @@ from main import (
 from tests.media_utils import write_placeholder_png, write_silence_wav
 
 
+def test_ffmpeg_is_on_path() -> None:
+    assert shutil.which("ffmpeg"), (
+        "ffmpeg must be installed to run this suite; see README, Dockerfile, and .devcontainer"
+    )
+
+
 def fake_image_generator(visual_prompt: str, output_filename: Path) -> None:
     write_placeholder_png(Path(output_filename))
 
@@ -24,7 +30,6 @@ async def fake_audio_generator(text: str, output_filename: Path) -> None:
     write_silence_wav(Path(output_filename), duration=0.4)
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is required to encode video")
 def test_process_project_writes_mp4(tmp_path: Path, fixture_input: Path) -> None:
     output_dir = tmp_path / "output"
     temp_dir = tmp_path / "temp"
@@ -47,7 +52,6 @@ def test_process_project_writes_mp4(tmp_path: Path, fixture_input: Path) -> None
     assert expected.stat().st_size > 0
 
 
-@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg is required to encode video")
 def test_run_writes_mp4_with_fake_generators(tmp_path: Path, fixture_input: Path) -> None:
     app = VideoAutomationApp(
         fixture_input,

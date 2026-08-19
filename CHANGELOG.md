@@ -6,6 +6,7 @@ All notable changes to this project are documented in this file.
 
 - Documented `detected_frameworks` so classifiers treat this as a CLI, not IaC.
 - Added exponential backoff between TTS retries.
+- Pipeline tests now fail (not skip) when ffmpeg is missing; the devcontainer verifies ffmpeg is present.
 
 ## 0.2.0
 
