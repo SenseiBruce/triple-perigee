@@ -1,0 +1,15 @@
+{
+  "name": "triple-perigee",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "postCreateCommand": "pip install -r requirements-dev.txt",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python"
+      }
+    }
+  }
+}
