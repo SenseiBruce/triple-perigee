@@ -44,7 +44,7 @@ multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
-numpy==1.26.4
+numpy==2.2.6
     # via
     #   -r requirements.txt
     #   imageio
