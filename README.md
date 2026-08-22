@@ -147,6 +147,10 @@ Videos are saved to `output/{project_name}.mp4` with:
 - Codec: H.264 (libx264)
 - Audio: AAC
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests, and pull request guidelines. Notable changes are tracked in [CHANGELOG.md](CHANGELOG.md).
+
 ## Architecture
 
 See [business-logic.md](business-logic.md) for detailed architecture and data flow diagrams.
@@ -183,4 +187,4 @@ triple-perigee/
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
