@@ -22,23 +22,23 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Processing",
 ]
 dependencies = [
-    "moviepy==1.0.3",
+    "moviepy==2.2.1",
     "edge-tts==7.2.8",
-    "numpy==1.26.4",
+    "numpy==2.2.6",
     "Pillow==12.3.0",
     "proglog==0.1.12",
     "pydantic==2.13.4",
-    "python-json-logger==3.3.0",
+    "python-json-logger==4.2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
     "pytest-cov==7.1.0",
-    "ruff==0.16.3",
-    "pip-audit==2.9.0",
-    "pip-tools==7.4.1",
-    "mypy==1.13.0",
+    "ruff==0.16.4",
+    "pip-audit==2.10.1",
+    "pip-tools==7.6.1",
+    "mypy==2.3.1",
 ]
 
 [project.scripts]
