@@ -1,7 +1,7 @@
-moviepy==1.0.3
+moviepy==2.2.1
 edge-tts==7.2.8
-numpy==1.26.4
+numpy==2.2.6
 Pillow==12.3.0
 proglog==0.1.12
-pydantic==2.13.4
-python-json-logger==3.3.0
+pydantic==2.13.5
+python-json-logger==4.2.0
